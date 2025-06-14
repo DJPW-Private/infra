@@ -13,9 +13,9 @@ variable "globals" {
 
   default = {
     "aws" = {
-        "account_id" = "XXXXXXXXXX"
-        "region" = "us-east-2"
-        "environment" = "dev"
+        "account_id" = "XXXXXXXXXX"     ## Get from TF Workspace
+        "region" = "us-east-2"          ## Get from TF Workspace
+        "environment" = "dev"           ## Get from TF Workspace
     }
     "project" ={
         "name" = "test"

@@ -1,0 +1,6 @@
+{
+  "action": "update",
+  "post_id": "alert_20240620",
+  "channel": "#alerts",
+  "message": "🚨 New system alert: CPU usage exceeded threshold."
+}

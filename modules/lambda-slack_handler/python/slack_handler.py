@@ -2,6 +2,11 @@ import boto3
 import json
 import os
 import logging
+import requests# File: modules/lambda-slack_handler/python/slack_handler.py
+import boto3
+import json
+import os
+import logging
 import requests
 
 # Logging
@@ -16,8 +21,16 @@ secretsmanager = boto3.client('secretsmanager')
 TABLE_NAME = os.environ['TABLE_NAME']
 SECRET_NAME = os.environ['SECRET_NAME']
 
-# Slack token retrieval
 def get_slack_token():
+    """
+    Retrieve the Slack token from AWS Secrets Manager.
+
+    Returns:
+        str: The Slack token.
+
+    Raises:
+        Exception: If there is an error retrieving the Slack token.
+    """
     try:
         secret_value = secretsmanager.get_secret_value(SecretId=SECRET_NAME)
         return json.loads(secret_value['SecretString'])['SLACK_TOKEN']
@@ -25,8 +38,17 @@ def get_slack_token():
         logger.error("Failed to retrieve Slack token: %s", str(e))
         raise
 
-# Util: get Slack user ID
 def get_user_id(username, token):
+    """
+    Get the Slack user ID for a given username.
+
+    Args:
+        username (str): The username to search for.
+        token (str): The Slack token.
+
+    Returns:
+        str or None: The user ID if found, otherwise None.
+    """
     url = "https://slack.com/api/users.list"
     headers = {'Authorization': f'Bearer {token}'}
     resp = requests.get(url, headers=headers).json()
@@ -35,8 +57,17 @@ def get_user_id(username, token):
             return member.get("id")
     return None
 
-# Util: get Slack channel ID
 def get_channel_id(channel_name, token):
+    """
+    Get the Slack channel ID for a given channel name.
+
+    Args:
+        channel_name (str): The channel name to search for.
+        token (str): The Slack token.
+
+    Returns:
+        str or None: The channel ID if found, otherwise None.
+    """
     url = "https://slack.com/api/conversations.list"
     headers = {'Authorization': f'Bearer {token}'}
     resp = requests.get(url, headers=headers).json()
@@ -45,8 +76,16 @@ def get_channel_id(channel_name, token):
             return channel.get("id")
     return None
 
-# DynamoDB access
 def get_post_ts(post_id):
+    """
+    Retrieve the timestamp of a post from DynamoDB.
+
+    Args:
+        post_id (str): The ID of the post.
+
+    Returns:
+        str or None: The timestamp of the post if found, otherwise None.
+    """
     try:
         resp = dynamodb.get_item(
             TableName=TABLE_NAME,
@@ -58,6 +97,13 @@ def get_post_ts(post_id):
         return None
 
 def put_post_ts(post_id, ts):
+    """
+    Store the timestamp of a post in DynamoDB.
+
+    Args:
+        post_id (str): The ID of the post.
+        ts (str): The timestamp to store.
+    """
     try:
         dynamodb.put_item(
             TableName=TABLE_NAME,
@@ -70,6 +116,12 @@ def put_post_ts(post_id, ts):
         logger.error("DynamoDB put_item error: %s", str(e))
 
 def delete_post_id(post_id):
+    """
+    Delete a post ID from DynamoDB.
+
+    Args:
+        post_id (str): The ID of the post to delete.
+    """
     try:
         dynamodb.delete_item(
             TableName=TABLE_NAME,
@@ -78,8 +130,18 @@ def delete_post_id(post_id):
     except Exception as e:
         logger.error("DynamoDB delete_item error: %s", str(e))
 
-# Slack API
 def post_message(channel_id, text, token):
+    """
+    Post a message to a Slack channel.
+
+    Args:
+        channel_id (str): The ID of the channel.
+        text (str): The message text.
+        token (str): The Slack token.
+
+    Returns:
+        str or None: The timestamp of the posted message if successful, otherwise None.
+    """
     url = "https://slack.com/api/chat.postMessage"
     headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
     data = {"channel": channel_id, "text": text}
@@ -87,12 +149,32 @@ def post_message(channel_id, text, token):
     return resp.get("ts") if resp.get("ok") else None
 
 def update_message(channel_id, ts, text, token):
+    """
+    Update a Slack message.
+
+    Args:
+        channel_id (str): The ID of the channel.
+        ts (str): The timestamp of the message to update.
+        text (str): The new message text.
+        token (str): The Slack token.
+    """
     url = "https://slack.com/api/chat.update"
     headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
     data = {"channel": channel_id, "ts": ts, "text": text}
     requests.post(url, headers=headers, json=data)
 
 def get_message_text(channel_id, ts, token):
+    """
+    Retrieve the text of a Slack message.
+
+    Args:
+        channel_id (str): The ID of the channel.
+        ts (str): The timestamp of the message.
+        token (str): The Slack token.
+
+    Returns:
+        str: The text of the message.
+    """
     url = "https://slack.com/api/conversations.history"
     headers = {'Authorization': f'Bearer {token}'}
     params = {"channel": channel_id, "latest": ts, "inclusive": True, "limit": 1}
@@ -100,7 +182,14 @@ def get_message_text(channel_id, ts, token):
     return resp["messages"][0]["text"] if "messages" in resp and resp["messages"] else ""
 
 def dm_user(user_name, message, token):
-    """Send a direct message to a user by username."""
+    """
+    Send a direct message to a Slack user by username.
+
+    Args:
+        user_name (str): The username of the recipient.
+        message (str): The message text.
+        token (str): The Slack token.
+    """
     user_id = get_user_id(user_name, token)
     if not user_id:
         logger.error("User '%s' not found", user_name)
@@ -137,8 +226,14 @@ def dm_user(user_name, message, token):
     else:
         logger.error("Failed to send DM to %s: %s", user_name, post_resp.get("error"))
 
-# Lambda entry point
 def lambda_handler(event, context):
+    """
+    AWS Lambda function entry point for handling Slack interactions.
+
+    Args:
+        event (dict): The event data passed to the Lambda function.
+        context (object): The context in which the Lambda function is called.
+    """
     logger.info("Received event: %s", json.dumps(event))
 
     token = get_slack_token()

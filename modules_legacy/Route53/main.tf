@@ -4,13 +4,13 @@ resource "aws_route53_zone" "resume_subdomain" {
 }
 
 # Example A record (for website hosting)
-# resource "aws_route53_record" "resume_a" {
-#   zone_id = aws_route53_zone.resume_subdomain.zone_id
-#   name    = "resume.warta.org"
-#   type    = "A"
-#   ttl     = 300
-#   records = ["1.2.3.4"] # Replace with your actual IP or use an alias to S3/CloudFront/ALB
-# }
+resource "aws_route53_record" "resume_a" {
+  zone_id = aws_route53_zone.resume_subdomain.zone_id
+  name    = "site58.resume.warta.org"
+  type    = "A"
+  ttl     = 300
+  records = ["23.235.23.74"] # Replace with your actual IP or use an alias to S3/CloudFront/ALB
+}
 
 # # Example MX record (for email)
 # resource "aws_route53_record" "resume_mx" {

@@ -8,5 +8,5 @@ terraform {
 }
 
 provider "aws" {
-  region = var.globals.aws.region
+  region = local.globals.aws.region
 }

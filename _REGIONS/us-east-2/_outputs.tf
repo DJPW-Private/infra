@@ -1,3 +1,3 @@
 output "Globals" {
-  value = var.globals
+  value = local.global
 }
